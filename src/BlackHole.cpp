@@ -1,7 +1,6 @@
 #include "BlackHole.h"
 #include "view/shader.h" 
 
-// Define constants for gravitational constant and speed of light
 const double G = 6.67430e-11; // Gravitational constant 
 const double c = 299792458.0; // Speed of light in the vacuum 
 
@@ -9,10 +8,9 @@ const double c = 299792458.0; // Speed of light in the vacuum
 // Initializes position, mass, and calculates the Schwarzschild radius
 BlackHole::BlackHole(glm::vec3 pos, double m) : position(pos), mass(m), r_s(2.0 * G * m / (c * c))
 {
-    SetupMesh(); // Set up the mesh for rendering the black hole
+    SetupMesh(); 
 }
 
-// Function to set up the mesh for rendering the black hole
 void BlackHole::SetupMesh(){
     // Generate vertex data for a circular representation of the black hole
     std::vector<float> vertices;
@@ -44,7 +42,6 @@ void BlackHole::SetupMesh(){
     glBindVertexArray(0);
 }
 
-// Function to draw the black hole using the specified shader program
 void BlackHole::Draw(GLuint shaderProgram){
     glUseProgram(shaderProgram);
 

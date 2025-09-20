@@ -3,12 +3,10 @@ extern "C" {
     __declspec(dllexport) unsigned long NvOptimusEnablement = 0x00000001;
 }
 
-// Include necessary headers
 #include "config.h"
 #include "controller/app.h"
 #include "BlackHole.h"
 
-// Entry point of the program
 int main() {
 
 	// Create an instance of the App class to manage the application

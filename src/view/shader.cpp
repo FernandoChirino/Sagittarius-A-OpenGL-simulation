@@ -1,7 +1,6 @@
 #include "shader.h"
 
-unsigned int make_shader(
-    const std::string& vertex_filepath, const std::string& fragment_filepath) {
+unsigned int make_shader(const std::string& vertex_filepath, const std::string& fragment_filepath) {
 
 	//To store all the shader modules
 	std::vector<unsigned int> modules;

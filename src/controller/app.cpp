@@ -26,10 +26,10 @@ void App::run(BlackHole& blackhole) {
     while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
 
-		blackhole.Draw(shader); // Draw the black hole
+		blackhole.Draw(shader); 
 
 		glfwSwapBuffers(window); // Swap the front and back buffers
-		glfwPollEvents(); // Poll for events
+		glfwPollEvents(); 
 
 		handle_frame_timing(); // Handle frame timing and update the window title
 	}
@@ -39,12 +39,12 @@ void App::run(BlackHole& blackhole) {
 void App::set_up_glfw() {
 
     glfwInit(); // Initialize GLFW
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); // Set OpenGL version to 3.3
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3); 
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // Use core profile
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE); // Ensure compatibility
 	
-	window = glfwCreateWindow(800, 600, "Hello Window!", NULL, NULL); // Create a window
+	window = glfwCreateWindow(800, 600, "Sagittarius A*", NULL, NULL); // Create a window
     if (!window) {
         std::cerr << "Failed to create GLFW window." << std::endl;
         glfwTerminate();
@@ -54,7 +54,7 @@ void App::set_up_glfw() {
 	glfwSwapInterval(1); // Enable V-Sync
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); // Hide the cursor
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {  // Checks if GLAD was able to load al OpenGL function pointers. 
 		std::cerr << "Couldn't load OpenGL." << std::endl;
 		glfwTerminate();
         exit(EXIT_FAILURE);
@@ -64,17 +64,18 @@ void App::set_up_glfw() {
 // Function to set up OpenGL settings and load shaders
 void App::set_up_opengl() {
 
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set the clear color to black
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); 
+
 	// Set the rendering region to the actual screen size
 	int w,h;
-	glfwGetFramebufferSize(window, &w, &h);
-	// (left, top, width, height)
-	glViewport(0,0,w,h);
+	glfwGetFramebufferSize(window, &w, &h); 
+	glViewport(0,0,w,h); // Resolution
 
-	glEnable(GL_DEPTH_TEST); // Enable depth testing
-	glDepthFunc(GL_LESS); // Set depth function
-	glEnable(GL_CULL_FACE); // Enable face culling
-    glCullFace(GL_BACK); // Cull back faces
+	glEnable(GL_DEPTH_TEST); // Ensures objects closer to the camera hide objects behind them 
+	glDepthFunc(GL_LESS); 
+
+	glEnable(GL_CULL_FACE); // Prevents rendering of faces that you don't see. 
+    glCullFace(GL_BACK); 
 
     shader = make_shader(
 		"../src/shaders/vertex.txt", 
@@ -85,7 +86,7 @@ void App::set_up_opengl() {
         exit(EXIT_FAILURE);
     }
     
-    glUseProgram(shader); // Use the shader program
+    glUseProgram(shader); 
 
     // Set projection matrix
 	GLint projLocation = glGetUniformLocation(shader, "projection");
@@ -94,7 +95,7 @@ void App::set_up_opengl() {
     }
 	glm::mat4 projection = glm::perspective(
 		45.0f, 640.0f / 480.0f, 0.1f, 50.0f); // Create a perspective projection matrix
-	glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(projection)); 
 
     // Set view matrix
     GLint viewLocation = glGetUniformLocation(shader, "view");
