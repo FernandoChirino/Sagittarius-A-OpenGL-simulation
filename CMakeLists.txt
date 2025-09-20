@@ -21,6 +21,7 @@ add_executable(Sagittarius_A
     src/glad.c
     src/view/shader.cpp
     src/controller/app.cpp
+    src/BlackHole.cpp
 )
 
 target_include_directories(Sagittarius_A

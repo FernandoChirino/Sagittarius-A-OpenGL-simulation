@@ -1,11 +1,12 @@
 #pragma once
 #include "../config.h"
+#include "../BlackHole.h"
 
 class App {
 public:
     App();
     ~App();
-    void run();
+    void run(BlackHole& blackhole);
     void set_up_opengl();
     void make_systems();
     
