@@ -13,7 +13,7 @@ int main() {
 	App* app = new App();
 
 	// Create a black hole object with a specific position and mass
-	BlackHole Sagitarius(glm::vec3(0.0f, 0.0f, 0.0f), 8.54e36);
+	BlackHole Sagitarius(glm::vec3(1.0f, 0.0f, 0.0f), 8.54e36);
 
 	// Set up OpenGL context and initialize the application
 	app->set_up_opengl();

@@ -8,6 +8,7 @@ const double c = 299792458.0; // Speed of light in the vacuum
 // Initializes position, mass, and calculates the Schwarzschild radius
 BlackHole::BlackHole(glm::vec3 pos, double m) : position(pos), mass(m), r_s(2.0 * G * m / (c * c))
 {
+    model = glm::translate(glm::mat4(1.0f), position); 
     SetupMesh(); 
 }
 
@@ -44,6 +45,10 @@ void BlackHole::SetupMesh(){
 
 void BlackHole::Draw(GLuint shaderProgram){
     glUseProgram(shaderProgram);
+
+    // Pass model matrix
+    GLint ModelLoc = glGetUniformLocation(shaderProgram, "model");
+    glUniformMatrix4fv(ModelLoc, 1, GL_FALSE, glm::value_ptr(model));
 
     // Set the color uniform (e.g., red color)
     GLint colorLocation = glGetUniformLocation(shaderProgram, "color");

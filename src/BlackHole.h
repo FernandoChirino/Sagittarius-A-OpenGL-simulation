@@ -5,6 +5,7 @@ struct BlackHole{
     double mass;        
     double radius;     
     double r_s;         // Schwarzschild radius (event horizon radius)
+    glm::mat4 model = glm::mat4(1.0f);
 
     GLuint VAO, VBO;    
 
