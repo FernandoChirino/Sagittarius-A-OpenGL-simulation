@@ -9,12 +9,15 @@ struct Ray{
     double r, phi;
     double dr, dphi;
 
+    glm::vec2 dir;
+
     // Trail of points 
     std::vector<glm::vec2> trail;
 
-
     // Conserve quantities 
     double E, L;
+
+    const float speed = 0.01f; 
 
     glm::mat4 model = glm::mat4(1.0f);
 

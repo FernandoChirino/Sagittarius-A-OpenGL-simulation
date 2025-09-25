@@ -3,7 +3,7 @@
 #include "config.h"
 #include <cmath>
 
-Ray::Ray(glm::vec2 pos, glm::vec2 dir, double r_s) : x(pos.x), y(pos.y){
+Ray::Ray(glm::vec2 pos, glm::vec2 dir, double r_s) : x(pos.x), y(pos.y), dir(dir){ 
     model = glm::translate(glm::mat4(1.0f), glm::vec3(pos, 0.0f));
     SetupMesh();
 }
@@ -27,8 +27,15 @@ void Ray::SetupMesh(){
 }
 
 void Ray::Step(double dLambda, double r_s){
-    double lambda = dLambda;
-    if (r <= r_s) return; // Stop if inside the event horizon
+
+    x += dir.x * speed;
+    y += dir.y * speed;
+    
+    r = sqrt(x*x + y*y);
+    
+    //if (r <= r_s) return; // Stop if inside the event horizon
+
+    model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
 }
 
 void Ray::Draw(const std::vector<Ray>& rays, GLuint shaderProgram){
