@@ -1,6 +1,7 @@
 #include "app.h"
 #include "../view/shader.h" 
 #include "../BlackHole.h"
+#include "../Ray.h"
 
 // Constructor for the App class
 // Sets up GLFW for window and context management
@@ -23,10 +24,14 @@ void App::run(BlackHole& blackhole) {
 	numFrames = 0; // Initialize the frame counter
 	frameTime = 16.0f; // Set the initial frame time
 
+	std::vector<Ray> rays = InitializeRays(2, blackhole.r_s);
+
     while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
 
 		blackhole.Draw(shader); 
+
+		Ray::Draw(rays, shader); 
 
 		glfwSwapBuffers(window); // Swap the front and back buffers
 		glfwPollEvents(); 
@@ -134,4 +139,22 @@ void App::handle_frame_timing() {
 	}
 
 	++numFrames; // Increment the frame counter
+}
+
+std::vector<Ray> App::InitializeRays(int numRays, double r_s){
+	std::vector<Ray> rays;
+	rays.reserve(numRays);
+
+	for (int i = 0; i < numRays; ++i){
+		glm::vec2 pos;
+		pos.x = -1.0f + ((float)rand() / RAND_MAX) * 0.5f; // -1.0 to -0.5 (left side)
+		pos.y = -1.0f + ((float)rand() / RAND_MAX) * 2.0f;  // -1.0 to 1.0 (full height)
+
+		glm::vec2 dir = glm::normalize(glm::vec2(1.0f, ((float)rand() / RAND_MAX) * 2.0f - 1.0f));
+
+    	// Create the Ray and add to the vector
+    	rays.emplace_back(pos, dir, r_s);
+	}
+
+	return rays; 
 }

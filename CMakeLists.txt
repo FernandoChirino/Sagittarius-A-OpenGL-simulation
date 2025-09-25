@@ -22,6 +22,7 @@ add_executable(Sagittarius_A
     src/view/shader.cpp
     src/controller/app.cpp
     src/BlackHole.cpp
+    src/Ray.cpp
 )
 
 target_include_directories(Sagittarius_A

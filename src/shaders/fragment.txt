@@ -12,6 +12,5 @@ const vec3 sunDirection = normalize(vec3(-1.0, 1.0, 1.0));
 
 void main()
 {
-    // Debugging: Set a fixed red color
-    screenColor = vec4(1.0, 0.0, 0.0, 1.0);
+    screenColor = vec4(color, 1.0);
 }

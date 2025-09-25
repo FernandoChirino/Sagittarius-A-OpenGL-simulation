@@ -1,6 +1,7 @@
 #pragma once
 #include "../config.h"
 #include "../BlackHole.h"
+#include "../Ray.h"
 
 class App {
 public:
@@ -13,6 +14,7 @@ public:
 private:
     void set_up_glfw();
     void handle_frame_timing();
+    std::vector<Ray> InitializeRays(int numRays, double r_s);
 
     GLFWwindow* window;
 
