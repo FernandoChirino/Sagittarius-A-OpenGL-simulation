@@ -8,6 +8,7 @@ extern "C" {
 #include "BlackHole.h"
 
 int main() {
+	srand(static_cast<unsigned int>(time(nullptr)));
 
 	// Create an instance of the App class to manage the application
 	App* app = new App();

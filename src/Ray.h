@@ -22,6 +22,7 @@ struct Ray{
     glm::mat4 model = glm::mat4(1.0f);
 
     GLuint VAO, VBO;
+    GLuint trailVAO, trailVBO; 
 
     // Constructor 
     Ray(glm::vec2 pos, glm::vec2 dir, double r_s); 

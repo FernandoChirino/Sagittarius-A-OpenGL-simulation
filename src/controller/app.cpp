@@ -33,7 +33,7 @@ void App::run(BlackHole& blackhole) {
 		
 		for (auto& ray : rays){
 			ray.Step(0.0f,blackhole. r_s);
-			std::cout << ray.x << "    " << ray.y << "       r_s: " << blackhole.r_s << std::endl;
+			//std::cout << ray.x << "    " << ray.y << "       r_s: " << blackhole.r_s << std::endl;
 		}
 
 		Ray::Draw(rays, shader); 
@@ -152,8 +152,8 @@ std::vector<Ray> App::InitializeRays(int numRays, double r_s){
 
 	for (int i = 0; i < numRays; ++i){
 		glm::vec2 pos;
-		pos.x = -1.0f + ((float)rand() / RAND_MAX) * 0.5f; // -1.0 to -0.5 (left side)
-		pos.y = -1.0f + ((float)rand() / RAND_MAX) * 2.0f;  // -1.0 to 1.0 (full height)
+		pos.x = -1.0f + ((float)rand() / RAND_MAX) * 0.5f; 
+		pos.y = -1.0f + ((float)rand() / RAND_MAX) * 2.0f;
 
 		glm::vec2 dir = glm::normalize(glm::vec2(1.0f, ((float)rand() / RAND_MAX) * 2.0f - 1.0f));
 
