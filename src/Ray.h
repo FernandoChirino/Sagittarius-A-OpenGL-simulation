@@ -12,7 +12,8 @@ struct Ray{
     glm::vec2 dir;
 
     // Trail of points 
-    std::vector<glm::vec2> trail;
+    std::vector<glm::vec3> trail;
+    size_t maxTrailLength = 1000;
 
     // Conserve quantities 
     double E, L;

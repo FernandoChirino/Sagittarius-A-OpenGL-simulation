@@ -24,7 +24,7 @@ void App::run(BlackHole& blackhole) {
 	numFrames = 0; // Initialize the frame counter
 	frameTime = 16.0f; // Set the initial frame time
 
-	std::vector<Ray> rays = InitializeRays(2, blackhole.r_s);
+	std::vector<Ray> rays = InitializeRays(20, blackhole.r_s);
 
     while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
@@ -152,8 +152,8 @@ std::vector<Ray> App::InitializeRays(int numRays, double r_s){
 
 	for (int i = 0; i < numRays; ++i){
 		glm::vec2 pos;
-		pos.x = -1.0f + ((float)rand() / RAND_MAX) * 0.5f; 
-		pos.y = -1.0f + ((float)rand() / RAND_MAX) * 2.0f;
+		pos.x = -3.5f + ((float)rand() / RAND_MAX) * 0.6f; 
+		pos.y = -2.0f + ((float)rand() / RAND_MAX) * 4.0f;
 
 		glm::vec2 dir = glm::normalize(glm::vec2(1.0f, ((float)rand() / RAND_MAX) * 2.0f - 1.0f));
 
