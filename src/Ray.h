@@ -7,20 +7,21 @@ struct Ray{
 
     // Polar coordinates
     double r, phi;
-    double dr, dphi;
 
-    glm::vec2 dir;
+    // Conserve quantities 
+    double E, L;
+    
+    const double speed = 0.5; 
+    static constexpr double simulation_scale_factor = 10.0; 
+    double meters_per_screen_unit; 
 
     // Trail of points 
     std::vector<glm::vec3> trail;
     size_t maxTrailLength = 1000;
 
-    // Conserve quantities 
-    double E, L;
-
-    const float speed = 0.01f; 
-
     glm::mat4 model = glm::mat4(1.0f);
+
+    glm::vec2 dir;
 
     GLuint VAO, VBO;
     GLuint trailVAO, trailVBO; 
@@ -30,9 +31,8 @@ struct Ray{
 
     void SetupMesh();
     void Step(double dLambda, double r_s);
+    void calculateSchwarzschildGeodesic(double r_s_meter, double dt);
+
     static void Draw(const std::vector<Ray>& rays, GLuint shaderProgram);
 };
 
-void geodesicRHS(const Ray& ray, double rhs[4], double rs);
-void addState(const double a[4], const double b[4], double factor, double out[4]);
-void rk4Step(Ray& ray, double dLambda, double rs); 

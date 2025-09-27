@@ -30,11 +30,9 @@ void App::run(BlackHole& blackhole) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
 
 		blackhole.Draw(shader); 
-		std::cout << blackhole.r_s << std::endl;
 		
 		for (auto& ray : rays){
-			ray.Step(0.0f, blackhole.r_s);
-			//std::cout << ray.x << "    " << ray.y << "       r_s: " << blackhole.r_s << std::endl;
+			ray.Step(0.01f, blackhole.r_s);
 		}
 
 		Ray::Draw(rays, shader); 
