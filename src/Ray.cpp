@@ -3,14 +3,16 @@
 #include "config.h"
 #include <cmath>
 
-Ray::Ray(glm::vec2 pos, glm::vec2 dir, double r_s) : x(pos.x), y(pos.y), dir(dir){ 
+Ray::Ray(glm::vec2 pos, glm::vec2 dir) : x(pos.x), y(pos.y), dir(dir){ 
     // Get polar coordinates
     r = sqrt(x*x + y*y);
     phi = atan2(y,x);
 
-    // Seed velocities 
-    // dr = dir.x * cos(phi) + dir.y * sin(phi);
-    // dphi = (-dir.x * sin(phi) + dir.y * cos(phi)) / r; 
+    // Polar velocities 
+    dr = dir.x * cos(phi) + dir.y * sin(phi);
+    dphi = (-dir.x * sin(phi) + dir.y * cos(phi)) / r; 
+
+    E = 1.0; 
 
     // Start trail
     trail.push_back({x,y, 1.0f}); 
@@ -59,18 +61,27 @@ void Ray::SetupMesh(){
 }
 
 void Ray::Step(double dLambda, double r_s_meters){
-    r = hypot(x, y);
-    
     // Convert Schwarzschild radius to screen coordinates
-    meters_per_screen_unit = (r_s_meters * simulation_scale_factor) / 6.0;
+    meters_per_screen_unit = (r_s_meters * simulation_scale_factor) / 6;
     double r_s_screen = r_s_meters / meters_per_screen_unit;
 
-    if (r <= r_s_screen) return; // Stop if inside the event horizon
+    r = hypot(x, y);
+    if (r <= r_s_screen * 1.05) return; // Stop if inside the event horizon
 
-    calculateSchwarzschildGeodesic(r_s_meters, dLambda);
+    //calculateSchwarzschildGeodesic;
+    rk4Step(*this, dLambda, r_s_screen); 
 
-    x += dir.x * speed * dLambda;
-    y += dir.y * speed * dLambda;
+    
+    x = r * cos(phi);
+    y = r * sin(phi);
+
+    dir.x = dr * cos(phi) - r * sin(phi) * dphi;
+    dir.y = dr * sin(phi) + r * cos(phi) * dphi;
+
+    // normalize direction 
+    if (glm::length(dir) > 0) {
+        dir = glm::normalize(dir) * speed;
+    }
 
     trail.push_back(glm::vec3(x, y, 1.0f)); // Update trail after position update
 
@@ -136,61 +147,73 @@ void Ray::Draw(const std::vector<Ray>& rays, GLuint shaderProgram){
 
 }
 
-void Ray::calculateSchwarzschildGeodesic(double r_s_meters, double dt){
-    // Current pos in meters 
-    double x_m = x * meters_per_screen_unit;
-    double y_m = y * meters_per_screen_unit;
-    double r_m = hypot(x_m, y_m);
 
-    phi = atan2(y_m, x_m);
-    glm::vec2 old_dir = dir;
+void Ray::geodesicRHS(const Ray& ray, double rhs[4], double rs){
+    double r    = ray.r;
+    double dr   = ray.dr;
+    double dphi = ray.dphi;
+    double E    = ray.E;
 
-    // Velocities in physical units 
-    double vx_m = dir.x * speed * meters_per_screen_unit;
-    double vy_m = dir.y * speed * meters_per_screen_unit;
-
-    // Radial and angular velocities
-    double vr = (x_m * vx_m + y_m * vy_m) / r_m;
-    double vphi = (x_m * vy_m - y_m * vx_m) / (r_m * r_m);
-
-    // Schwarzschild metric components
-    double f = 1.0 - r_s_meters / r_m;
-    
-    // Geodesic equations (simplified for photons/massless particles)
-    // d²r/dτ² = -GM/r² + L²/r³ - 3GM*L²/(2r⁴c²)
-    double L = r_m * r_m * vphi; // Angular momentum 
-    constexpr double GM = 1.327e20;
-
-    // Radial acceleration
-    double ar = -GM / (r_m * r_m) + L * L / (r_m * r_m * r_m) 
-                - 3.0 * GM * L * L / (2.0 * pow(r_m, 4) * 299792458.0 * 299792458.0);
-
-    // Angular acceleration
-    double aphi = -2.0 * vr * vphi / r_m;
-
-    vr += ar * dt;
-    vphi += aphi * dt;
-
-    // Convert back to Cartesian velocities
-    double cos_phi = cos(phi);
-    double sin_phi = sin(phi);
-
-    vx_m = vr * cos_phi - r_m * vphi * sin_phi;
-    vy_m = vr * sin_phi + r_m * vphi * cos_phi;
-    
-    // Convert back to screen coordinates and update direction
-    dir.x = vx_m / (speed * meters_per_screen_unit);
-    dir.y = vy_m / (speed * meters_per_screen_unit);
-    
-    dir = glm::normalize(dir);
-
-    // DEBUG
-    static int debug_counter = 0;
-    if (debug_counter % 60 == 0) {
-        std::cout << "Geodesic: r=" << r_m/r_s_meters << "Rs, "
-                  << "old_dir=(" << old_dir.x << "," << old_dir.y << "), "
-                  << "new_dir=(" << dir.x << "," << dir.y << "), "
-                  << "ar=" << ar << ", aphi=" << aphi << std::endl;
+    // Prevents calculatios too close to the event horizon
+    if (r <= rs * 1.01){
+        rhs[0] = 0; // dr/dλ = 0
+        rhs[1] = 0; // dφ/dλ = 0
+        rhs[2] = 0; // d²r/dλ² = 0
+        rhs[3] = 0; // d²φ/dλ² = 0
+        return;
     }
-    debug_counter++;
+
+    double f = 1.0 - rs/r;
+
+    // Avoid numerical issues when f is very small
+    if (f < 1e-10) {
+        rhs[0] = 0;
+        rhs[1] = 0;
+        rhs[2] = 0;
+        rhs[3] = 0;
+        return;
+    }
+
+    // dr/dλ = dr
+    rhs[0] = dr;
+    // dφ/dλ = dphi
+    rhs[1] = dphi;
+
+    // d²r/dλ² from Schwarzschild null geodesic:
+    double dt_dλ = E / f;
+    rhs[2] = 
+        - (rs/(2*r*r)) * f * (dt_dλ*dt_dλ)
+        + (rs/(2*r*r*f)) * (dr*dr)
+        + (r - rs) * (dphi*dphi);
+
+    // d²φ/dλ² = -2*(dr * dphi) / r
+    rhs[3] = -2.0 * dr * dphi / r;
+}
+
+void Ray::addState(const double a[4], const double b[4], double factor, double out[4]) {
+    for (int i = 0; i < 4; i++)
+        out[i] = a[i] + b[i] * factor;
+}
+
+void Ray::rk4Step(Ray& ray, double dλ, double rs) {
+    double y0[4] = { ray.r, ray.phi, ray.dr, ray.dphi };
+    double k1[4], k2[4], k3[4], k4[4], temp[4];
+
+    geodesicRHS(ray, k1, rs);
+    addState(y0, k1, dλ/2.0, temp);
+    Ray r2 = ray; r2.r=temp[0]; r2.phi=temp[1]; r2.dr=temp[2]; r2.dphi=temp[3];
+    geodesicRHS(r2, k2, rs);
+
+    addState(y0, k2, dλ/2.0, temp);
+    Ray r3 = ray; r3.r=temp[0]; r3.phi=temp[1]; r3.dr=temp[2]; r3.dphi=temp[3];
+    geodesicRHS(r3, k3, rs);
+
+    addState(y0, k3, dλ, temp);
+    Ray r4 = ray; r4.r=temp[0]; r4.phi=temp[1]; r4.dr=temp[2]; r4.dphi=temp[3];
+    geodesicRHS(r4, k4, rs);
+
+    ray.r    += (dλ/6.0)*(k1[0] + 2*k2[0] + 2*k3[0] + k4[0]);
+    ray.phi  += (dλ/6.0)*(k1[1] + 2*k2[1] + 2*k3[1] + k4[1]);
+    ray.dr   += (dλ/6.0)*(k1[2] + 2*k2[2] + 2*k3[2] + k4[2]);
+    ray.dphi += (dλ/6.0)*(k1[3] + 2*k2[3] + 2*k3[3] + k4[3]);
 }

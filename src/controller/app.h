@@ -15,7 +15,7 @@ public:
 private:
     void set_up_glfw();
     void handle_frame_timing();
-    std::vector<Ray> InitializeRays(int numRays, double r_s);
+    std::vector<Ray> InitializeRays(int numRays);
     
     GLFWwindow* window;
     unsigned int shader;
