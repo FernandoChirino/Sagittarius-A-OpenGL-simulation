@@ -30,9 +30,10 @@ void App::run(BlackHole& blackhole) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
 
 		blackhole.Draw(shader); 
+		std::cout << blackhole.r_s << std::endl;
 		
 		for (auto& ray : rays){
-			ray.Step(0.0f,blackhole. r_s);
+			ray.Step(0.0f, blackhole.r_s);
 			//std::cout << ray.x << "    " << ray.y << "       r_s: " << blackhole.r_s << std::endl;
 		}
 
@@ -149,6 +150,7 @@ void App::handle_frame_timing() {
 std::vector<Ray> App::InitializeRays(int numRays, double r_s){
 	std::vector<Ray> rays;
 	rays.reserve(numRays);
+
 
 	for (int i = 0; i < numRays; ++i){
 		glm::vec2 pos;

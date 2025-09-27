@@ -58,9 +58,15 @@ void Ray::SetupMesh(){
     glBindVertexArray(0);
 }
 
-void Ray::Step(double dLambda, double r_s){
-    //r = hypot(x, y);
-    //if (r <= r_s) return; // Stop if inside the event horizon
+void Ray::Step(double dLambda, double r_s_meters){
+    r = hypot(x, y);
+   
+    // Convert Schwarzschild radius to screen coordinates
+    constexpr double simulation_scale_factor = 10.0; 
+    double meters_per_screen_unit = (r_s_meters * simulation_scale_factor) / 6.0;
+    double r_s_screen = r_s_meters / meters_per_screen_unit;
+
+    if (r <= r_s_screen) return; // Stop if inside the event horizon
 
     x += dir.x * speed;
     y += dir.y * speed;
