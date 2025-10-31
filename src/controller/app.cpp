@@ -17,7 +17,6 @@ App::~App() {
 }
 
 // Main loop to run the application
-// Renders the black hole and handles frame timing
 void App::run(BlackHole& blackhole) {
 
 	lastTime = glfwGetTime(); // Initialize the last frame time
@@ -200,11 +199,11 @@ void App::updateViewUniform() {
 
 // Function to handle frame timing and update the window title with FPS
 void App::handle_frame_timing() {
-	currentTime = glfwGetTime(); // Get the current time
-	double delta = currentTime - lastTime; // Calculate the time difference
+	currentTime = glfwGetTime(); 
+	double delta = currentTime - lastTime; 
 
 	if (delta >= 1) {
-		int framerate{ std::max(1, int(numFrames / delta)) }; // Calculate the framerate
+		int framerate{ std::max(1, int(numFrames / delta)) }; 
 		std::stringstream title;
 		title << "Sagittarius A running at " << framerate << " fps.";
 		glfwSetWindowTitle(window, title.str().c_str()); // Update the window title
@@ -213,7 +212,7 @@ void App::handle_frame_timing() {
 		frameTime = float(1000.0 / framerate); // Update the frame time
 	}
 
-	++numFrames; // Increment the frame counter
+	++numFrames; 
 }
 
 std::vector<Ray> App::InitializeRays(int numRays){

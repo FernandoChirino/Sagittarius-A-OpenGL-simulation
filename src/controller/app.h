@@ -41,7 +41,6 @@ private:
     // Update the view uniform from camera parameters
     void updateViewUniform();
 
-    // GLFW callbacks (static, will retrieve App* via glfwGetWindowUserPointer)
     static void cursorPosCallback(GLFWwindow* window, double xpos, double ypos);
     static void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
     static void scrollCallback(GLFWwindow* window, double xoffset, double yoffset);

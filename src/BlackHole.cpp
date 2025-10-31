@@ -21,8 +21,6 @@ void BlackHole::SetupMesh(){
     const int sectorCount = 36; // longitudinal slices
     const int stackCount = 18;  // latitudinal stacks
     // Compute visual radius in screen/world units to match ray integration stopping radius.
-    // From Ray::Step: meters_per_screen_unit = (r_s_meters * simulation_scale_factor) / 6
-    // So r_s_screen = r_s_meters / meters_per_screen_unit = 6 / simulation_scale_factor
     float radius = 6.0f / static_cast<float>(Ray::simulation_scale_factor);
 
     for (int i = 0; i <= stackCount; ++i) {
@@ -73,7 +71,6 @@ void BlackHole::SetupMesh(){
 
     indexCount = static_cast<GLsizei>(indices.size());
 
-    // Generate and bind vertex array, buffer and element buffer objects
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
@@ -85,7 +82,6 @@ void BlackHole::SetupMesh(){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
 
-    // Define vertex attributes to match shader: location 0 = pos(vec3), 1 = texcoord(vec3), 2 = normal(vec3)
     GLsizei stride = 9 * sizeof(float);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
