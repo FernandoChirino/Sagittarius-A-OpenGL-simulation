@@ -1,6 +1,7 @@
 # Sagittarius-A-OpenGL-simulation
 
 Lightweight OpenGL simulation that visualizes null geodesics (light rays) around a Schwarzschild black hole. The project renders a simple sphere for the black hole and numerically integrates ray geodesics using an RK4 integrator. It uses GLFW + GLAD for OpenGL context and GLM for math.
+![Untitled video 1- Made with Clipchamp](https://github.com/user-attachments/assets/2768e0ac-988f-4d34-9ccd-63150c0df4e0)
 
 ## Features
 - Visual representation of a black hole (sphere mesh)
