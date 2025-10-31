@@ -2,13 +2,13 @@
 #include "config.h"
 
 struct Ray{
-    // Cartesina coordinates 
-    double x, y;
+    // Cartesian position
+    glm::vec3 position;
 
-    // Polar coordinates
+    // Polar/spherical-like coordinates in the motion plane
     double r, phi;
-    // Polar velocities 
-    double dr, dphi; 
+    // Polar velocities
+    double dr, dphi;
 
     // Conserve quantities 
     double E, L;
@@ -18,19 +18,24 @@ struct Ray{
     double meters_per_screen_unit; 
     float speed = 1.0;
 
-    // Trail of points 
-    std::vector<glm::vec3> trail;
+    // Trail of points (x,y,z,alpha)
+    std::vector<glm::vec4> trail;
     size_t maxTrailLength = 1000;
 
     glm::mat4 model = glm::mat4(1.0f);
 
-    glm::vec2 dir;
+    glm::vec3 dir;
+
+    // Plane basis vectors for this ray's motion (motion is planar due to spherical symmetry)
+    glm::vec3 basis_r;   // radial unit vector at initialization
+    glm::vec3 basis_phi; // tangential unit vector in plane
+    glm::vec3 plane_normal;
 
     GLuint VAO, VBO;
     GLuint trailVAO, trailVBO; 
 
-    // Constructor 
-    Ray(glm::vec2 pos, glm::vec2 dir); 
+    // Constructor
+    Ray(glm::vec3 pos, glm::vec3 dir);
 
     void SetupMesh();
     void Step(double dLambda, double r_s);

@@ -8,6 +8,8 @@ struct BlackHole{
     glm::mat4 model = glm::mat4(1.0f);
 
     GLuint VAO, VBO;    
+    GLuint EBO;
+    GLsizei indexCount = 0;
 
     // Constructor to initialize the black hole with position and mass
     BlackHole(glm::vec3 pos, double m);

@@ -3,21 +3,45 @@
 #include "config.h"
 #include <cmath>
 
-Ray::Ray(glm::vec2 pos, glm::vec2 dir) : x(pos.x), y(pos.y), dir(dir){ 
-    // Get polar coordinates
-    r = sqrt(x*x + y*y);
-    phi = atan2(y,x);
+Ray::Ray(glm::vec3 pos, glm::vec3 dir) : position(pos), dir(dir){
+    // Initial radial distance
+    r = glm::length(position);
+    // Start at phi = 0 in the local motion plane
+    phi = 0.0;
 
-    // Polar velocities 
-    dr = dir.x * cos(phi) + dir.y * sin(phi);
-    dphi = (-dir.x * sin(phi) + dir.y * cos(phi)) / r; 
+    // Build orthonormal basis for the plane containing the motion.
+    // e_r points from origin to the initial position.
+    if (r > 0.0) {
+        basis_r = glm::normalize(position);
+    } else {
+        basis_r = glm::vec3(1.0f, 0.0f, 0.0f);
+    }
 
-    E = 1.0; 
+    // plane normal is cross(position, dir). If nearly zero, pick z axis.
+    plane_normal = glm::cross(position, dir);
+    if (glm::length(plane_normal) < 1e-8f) {
+        plane_normal = glm::vec3(0.0f, 0.0f, 1.0f);
+    } else {
+        plane_normal = glm::normalize(plane_normal);
+    }
 
-    // Start trail
-    trail.push_back({x,y, 1.0f}); 
+    // tangential direction in plane
+    basis_phi = glm::normalize(glm::cross(plane_normal, basis_r));
 
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(pos, 0.0f));
+    // Project velocity into this local plane basis to get dr and dphi
+    dr = glm::dot(dir, basis_r);
+    if (r > 0.0) {
+        dphi = glm::dot(dir, basis_phi) / r;
+    } else {
+        dphi = 0.0;
+    }
+
+    E = 1.0;
+
+    // Start trail (store xyz + alpha in w)
+    trail.push_back(glm::vec4(position, 1.0f));
+
+    model = glm::translate(glm::mat4(1.0f), position);
     SetupMesh();
 }
 
@@ -29,13 +53,16 @@ void Ray::SetupMesh(){
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    // Initially with a single point 
-    glm::vec2 point = glm::vec2(0.0f, 0.0f);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2), &point, GL_DYNAMIC_DRAW);
+    // Initially with a single point
+    glm::vec4 point = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4), &point, GL_DYNAMIC_DRAW);
 
     // Vertex attribute 0: position
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // Vertex attribute 3: alpha stored in w component
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(3);
 
     glBindVertexArray(0);
 
@@ -50,11 +77,11 @@ void Ray::SetupMesh(){
     glBufferData(GL_ARRAY_BUFFER, 0, nullptr, GL_DYNAMIC_DRAW);
 
     // Vertex attribute 0: position
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
     // Vertex atttribute 3: alpha
-    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(glm::vec3), (void*)(2 * sizeof(float)));
+    glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(3);
 
     glBindVertexArray(0);
@@ -65,25 +92,29 @@ void Ray::Step(double dLambda, double r_s_meters){
     meters_per_screen_unit = (r_s_meters * simulation_scale_factor) / 6;
     double r_s_screen = r_s_meters / meters_per_screen_unit;
 
-    r = hypot(x, y);
+    r = glm::length(position);
     if (r <= r_s_screen * 1.05) return; // Stop if inside the event horizon
 
     //calculateSchwarzschildGeodesic;
     rk4Step(*this, dLambda, r_s_screen); 
 
     
-    x = r * cos(phi);
-    y = r * sin(phi);
+    // Reconstruct 3D position from plane basis and updated r,phi
+    float cf = static_cast<float>(cos(phi));
+    float sf = static_cast<float>(sin(phi));
+    glm::vec3 radial_dir = cf * basis_r + sf * basis_phi;
+    glm::vec3 tangential_dir = -sf * basis_r + cf * basis_phi;
+    position = static_cast<float>(r) * radial_dir;
 
-    dir.x = dr * cos(phi) - r * sin(phi) * dphi;
-    dir.y = dr * sin(phi) + r * cos(phi) * dphi;
+    dir = static_cast<float>(dr) * radial_dir + static_cast<float>(r * dphi) * tangential_dir;
 
-    // normalize direction 
-    if (glm::length(dir) > 0) {
+    // normalize direction
+    if (glm::length(dir) > 0.0f) {
         dir = glm::normalize(dir) * speed;
     }
 
-    trail.push_back(glm::vec3(x, y, 1.0f)); // Update trail after position update
+    // Update trail (store alpha in w)
+    trail.push_back(glm::vec4(position, 1.0f)); // Update trail after position update
 
     // Limit the trail size 
     if (trail.size() > maxTrailLength) {
@@ -94,12 +125,12 @@ void Ray::Step(double dLambda, double r_s_meters){
     if (trail.size() > 1){
         for (size_t i = 0; i < trail.size(); i ++){
             float normalizedAge = (float)i / (float)(trail.size() - 1);
-            trail[i].z = normalizedAge;
+            trail[i].w = normalizedAge;
         }
     }
 
     
-    model = glm::translate(glm::mat4(1.0f), glm::vec3(x, y, 0.0f));
+    model = glm::translate(glm::mat4(1.0f), position);
 }
 
 void Ray::Draw(const std::vector<Ray>& rays, GLuint shaderProgram){
@@ -115,9 +146,9 @@ void Ray::Draw(const std::vector<Ray>& rays, GLuint shaderProgram){
         if (!ray.trail.empty()){
             glBindBuffer(GL_ARRAY_BUFFER, ray.trailVBO);
             glBufferData(GL_ARRAY_BUFFER,
-                        ray.trail.size() * sizeof(glm::vec3),
+                        ray.trail.size() * sizeof(glm::vec4),
                         ray.trail.data(),
-                        GL_DYNAMIC_DRAW); 
+                        GL_DYNAMIC_DRAW);
             
             GLint ModelLoc = glGetUniformLocation(shaderProgram, "model");
             glUniformMatrix4fv(ModelLoc, 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f))); // Use identity matrix for trail
@@ -138,7 +169,7 @@ void Ray::Draw(const std::vector<Ray>& rays, GLuint shaderProgram){
         glUniform3f(colorLocation, 1.0f, 1.0f, 1.0f); 
 
         glBindVertexArray(ray.VAO);
-        glPointSize(6.0f);
+        glPointSize(1.0f);
         glDrawArrays(GL_POINTS, 0, 1); 
         glBindVertexArray(0);
     }

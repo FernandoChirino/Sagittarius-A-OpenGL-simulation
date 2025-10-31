@@ -29,13 +29,16 @@ void App::run(BlackHole& blackhole) {
     while (!glfwWindowShouldClose(window)) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); // Clear the screen
 
-		blackhole.Draw(shader); 
-		
+		// Update camera view uniform from orbit camera state
+		updateViewUniform();
+
+		blackhole.Draw(shader);
+
 		for (auto& ray : rays){
 			ray.Step(0.01f, blackhole.r_s);
 		}
 
-		Ray::Draw(rays, shader); 
+		Ray::Draw(rays, shader);
 
 		glfwSwapBuffers(window); // Swap the front and back buffers
 		glfwPollEvents(); 
@@ -61,7 +64,16 @@ void App::set_up_glfw() {
     }
 	glfwMakeContextCurrent(window); // Make the window's context current
 	glfwSwapInterval(1); // Enable V-Sync
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN); // Hide the cursor
+
+	// Allow the cursor for camera interaction
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+
+	// Set this App instance as the user pointer so callbacks can access it
+	glfwSetWindowUserPointer(window, this);
+	// Set input callbacks for orbit camera
+	glfwSetCursorPosCallback(window, cursorPosCallback);
+	glfwSetMouseButtonCallback(window, mouseButtonCallback);
+	glfwSetScrollCallback(window, scrollCallback);
 
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {  // Checks if GLAD was able to load al OpenGL function pointers. 
 		std::cerr << "Couldn't load OpenGL." << std::endl;
@@ -97,34 +109,93 @@ void App::set_up_opengl() {
     
     glUseProgram(shader); 
 
-    // Set projection matrix
+	// Set projection matrix
 	GLint projLocation = glGetUniformLocation(shader, "projection");
     if (projLocation == -1) {
         std::cerr << "Failed to find 'projection' uniform location." << std::endl;
     }
 	glm::mat4 projection = glm::perspective(
-		45.0f, 640.0f / 480.0f, 0.1f, 50.0f); // Create a perspective projection matrix
+		glm::radians(45.0f), 640.0f / 480.0f, 0.1f, 50.0f); // Create a perspective projection matrix
 	glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(projection)); 
 
-    // Set view matrix
-    GLint viewLocation = glGetUniformLocation(shader, "view");
-    if (viewLocation == -1) {
-        std::cerr << "Failed to find 'view' uniform location." << std::endl;
-    }
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(0.0f, 0.0f, 5.0f), // Camera position
-        glm::vec3(0.0f, 0.0f, 0.0f), // Look at origin
-        glm::vec3(0.0f, 1.0f, 0.0f)  // Up vector
-    );
-    glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+	// Set initial view and model matrices (view will be updated each frame)
+	GLint viewLocation = glGetUniformLocation(shader, "view");
+	if (viewLocation == -1) {
+		std::cerr << "Failed to find 'view' uniform location." << std::endl;
+	}
+	updateViewUniform();
 
-    // Set model matrix
-    GLint modelLocation = glGetUniformLocation(shader, "model");
-    if (modelLocation == -1) {
-        std::cerr << "Failed to find 'model' uniform location." << std::endl;
-    }
-    glm::mat4 model = glm::mat4(1.0f); // Identity matrix
-    glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+	// Set model matrix
+	GLint modelLocation = glGetUniformLocation(shader, "model");
+	if (modelLocation == -1) {
+		std::cerr << "Failed to find 'model' uniform location." << std::endl;
+	}
+	glm::mat4 model = glm::mat4(1.0f); // Identity matrix
+	glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
+}
+
+// Static callbacks
+void App::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+	App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
+	if (!app) return;
+
+	if (app->rotating) {
+		double dx = xpos - app->lastMouseX;
+		double dy = ypos - app->lastMouseY;
+
+		app->camAzimuth += static_cast<float>(-dx) * app->camSensitivity;
+		app->camElevation += static_cast<float>(dy) * app->camSensitivity;
+
+		// Clamp elevation to avoid flip
+		const float maxElev = glm::radians(89.0f);
+		if (app->camElevation > maxElev) app->camElevation = maxElev;
+		if (app->camElevation < -maxElev) app->camElevation = -maxElev;
+
+		app->lastMouseX = xpos;
+		app->lastMouseY = ypos;
+	}
+}
+
+void App::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+	App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
+	if (!app) return;
+
+	// mods is unused by this callback — mark explicitly to avoid warnings
+	(void)mods;
+
+	if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+		if (action == GLFW_PRESS) {
+			app->rotating = true;
+			glfwGetCursorPos(window, &app->lastMouseX, &app->lastMouseY);
+		} else if (action == GLFW_RELEASE) {
+			app->rotating = false;
+		}
+	}
+}
+
+void App::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+	App* app = static_cast<App*>(glfwGetWindowUserPointer(window));
+	if (!app) return;
+	// xoffset is unused (we only care about vertical scroll)
+	(void)xoffset;
+	app->camRadius -= static_cast<float>(yoffset) * app->camZoomSpeed;
+	if (app->camRadius < 0.5f) app->camRadius = 0.5f;
+	if (app->camRadius > 50.0f) app->camRadius = 50.0f;
+}
+
+void App::updateViewUniform() {
+	// Build camera position from spherical coords
+	float x = camRadius * cosf(camElevation) * sinf(camAzimuth);
+	float y = camRadius * sinf(camElevation);
+	float z = camRadius * cosf(camElevation) * cosf(camAzimuth);
+	glm::vec3 camPos = glm::vec3(x, y, z);
+
+	glm::mat4 view = glm::lookAt(camPos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	GLint viewLocation = glGetUniformLocation(shader, "view");
+	if (viewLocation != -1) {
+		glUseProgram(shader);
+		glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
+	}
 }
 
 // Function to handle frame timing and update the window title with FPS
@@ -151,14 +222,17 @@ std::vector<Ray> App::InitializeRays(int numRays){
 
 
 	for (int i = 0; i < numRays; ++i){
-		glm::vec2 pos;
-		pos.x = -3.5f + ((float)rand() / RAND_MAX) * 0.6f; 
+		glm::vec3 pos;
+		pos.x = -3.5f + ((float)rand() / RAND_MAX) * 0.6f;
 		pos.y = -2.0f + ((float)rand() / RAND_MAX) * 4.0f;
+		pos.z = -0.5f + ((float)rand() / RAND_MAX) * 1.0f; // small offset in Z for 3D spread
 
-		glm::vec2 dir = glm::normalize(glm::vec2(1.0f, ((float)rand() / RAND_MAX) * 2.0f - 1.0f));
+		glm::vec3 dir = glm::normalize(glm::vec3(1.0f,
+												  ((float)rand() / RAND_MAX) * 2.0f - 1.0f,
+												  ((float)rand() / RAND_MAX) * 1.0f - 0.5f));
 
-    	// Create the Ray and add to the vector
-    	rays.emplace_back(pos, dir);
+		// Create the Ray and add to the vector
+		rays.emplace_back(pos, dir);
 	}
 
 	return rays; 

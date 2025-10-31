@@ -1,5 +1,6 @@
 #include "BlackHole.h"
 #include "view/shader.h" 
+#include "Ray.h"
 
 const double G = 6.67430e-11; // Gravitational constant 
 const double c = 299792458.0; // Speed of light in the vacuum 
@@ -13,32 +14,85 @@ BlackHole::BlackHole(glm::vec3 pos, double m) : position(pos), mass(m), r_s(2.0 
 }
 
 void BlackHole::SetupMesh(){
-    // Generate vertex data for a circular representation of the black hole
-    std::vector<float> vertices;
+    // Generate vertex data for a sphere representation of the black hole (UV sphere)
+    std::vector<float> vertices; // interleaved: pos(3), tex(3), normal(3)
+    std::vector<unsigned int> indices;
 
-    int numSegments = 100; // Number of segments for the circle
-    float radius = (float)r_s * 1e-10f; // Scale down the radius for visualization
+    const int sectorCount = 36; // longitudinal slices
+    const int stackCount = 18;  // latitudinal stacks
+    // Compute visual radius in screen/world units to match ray integration stopping radius.
+    // From Ray::Step: meters_per_screen_unit = (r_s_meters * simulation_scale_factor) / 6
+    // So r_s_screen = r_s_meters / meters_per_screen_unit = 6 / simulation_scale_factor
+    float radius = 6.0f / static_cast<float>(Ray::simulation_scale_factor);
 
-    for (int i = 0; i <= numSegments; i++){
-        float angle = 2.0f * glm::pi<float>() * i / numSegments;
-        float x = radius * cos(angle);
-        float y = radius * sin(angle);
-        vertices.push_back(x);
-        vertices.push_back(y);
-        vertices.push_back(0.0f); // Add z-coordinate
+    for (int i = 0; i <= stackCount; ++i) {
+        float stackAngle = glm::pi<float>() / 2 - i * (glm::pi<float>() / stackCount); // from pi/2 to -pi/2
+        float xy = radius * cosf(stackAngle); // r * cos(u)
+        float z = radius * sinf(stackAngle);  // r * sin(u)
+
+        for (int j = 0; j <= sectorCount; ++j) {
+            float sectorAngle = j * (2 * glm::pi<float>() / sectorCount); // 0 to 2pi
+            float x = xy * cosf(sectorAngle);
+            float y = xy * sinf(sectorAngle);
+
+            // position
+            vertices.push_back(x);
+            vertices.push_back(y);
+            vertices.push_back(z);
+            // texcoord placeholder (vec3 to match shader layout)
+            vertices.push_back((float)j / sectorCount);
+            vertices.push_back((float)i / stackCount);
+            vertices.push_back(0.0f);
+            // normal (normalize position)
+            glm::vec3 n = glm::normalize(glm::vec3(x, y, z));
+            vertices.push_back(n.x);
+            vertices.push_back(n.y);
+            vertices.push_back(n.z);
+        }
     }
 
-    // Generate and bind vertex array and buffer objects
+    // indices
+    for (int i = 0; i < stackCount; ++i) {
+        int k1 = i * (sectorCount + 1);     // beginning of current stack
+        int k2 = k1 + sectorCount + 1;      // beginning of next stack
+
+        for (int j = 0; j < sectorCount; ++j, ++k1, ++k2) {
+            if (i != 0) {
+                indices.push_back(k1);
+                indices.push_back(k2);
+                indices.push_back(k1 + 1);
+            }
+
+            if (i != (stackCount-1)) {
+                indices.push_back(k1 + 1);
+                indices.push_back(k2);
+                indices.push_back(k2 + 1);
+            }
+        }
+    }
+
+    indexCount = static_cast<GLsizei>(indices.size());
+
+    // Generate and bind vertex array, buffer and element buffer objects
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
+    glGenBuffers(1, &EBO);
 
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float), vertices.data(), GL_STATIC_DRAW);
 
-    // Define vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE , 3 * sizeof(float), nullptr); // Update to vec3
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), indices.data(), GL_STATIC_DRAW);
+
+    // Define vertex attributes to match shader: location 0 = pos(vec3), 1 = texcoord(vec3), 2 = normal(vec3)
+    GLsizei stride = 9 * sizeof(float);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     glBindVertexArray(0);
 }
@@ -55,6 +109,8 @@ void BlackHole::Draw(GLuint shaderProgram){
     glUniform3f(colorLocation, 1.0f, 0.0f, 0.0f); // Set color to red
 
     glBindVertexArray(VAO);
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 101); // Draw the circular mesh
+    if (indexCount > 0) {
+        glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);
+    }
     glBindVertexArray(0);
 }
